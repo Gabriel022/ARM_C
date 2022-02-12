@@ -1,0 +1,350 @@
+#include <stdio.h>
+
+unsigned int add(unsigned int a, unsigned int b)
+{
+return a+b;
+}
+
+unsigned int multiply(unsigned int a, unsigned int b)
+{
+return a*b;
+}
+
+unsigned int divide(unsigned int a, unsigned int b)
+{
+return a/b;
+}
+
+float mean(int* set, int n)
+{
+unsigned int sum = 0, i;
+for(i = 0; i < n; i++)
+    sum += set[i];
+return sum/n;
+}
+
+int odd_or_even(unsigned int a)
+{
+return a % 2;
+}
+
+unsigned int reverse_bits(unsigned int a)
+{
+unsigned int r = 0, i, temp;
+for (i = 0; i < sizeof(a) * 8; i++){
+    temp = (a & (1 << i));
+    if(temp)
+      r |= (1 << ((sizeof(a) * 8 - 1) - i));
+}
+return r;
+}
+
+int main()
+{
+unsigned int a, b, set[5] = {11, 12, 13, 14, 15}, result;
+float m;
+printf("Enter two numbers: ");
+scanf("%u %u", &a, &b);
+result = add(a, b);
+printf("add: %u", result);
+result = multiply(a, b);
+printf("multiply: %u", result);
+result = divide(a, b);
+printf("divide: %u", result);
+m = mean(set, 5);
+printf("mean: %f", m);
+result = odd_or_even(a);
+printf("odd_even: %u", result);
+result = reverse_bits(a);
+printf("reverse_bits: %u", result);
+result = a | b;
+printf("OR: %u", result);
+result = a & b;
+printf("AND: %u", result);
+result = a ^ b;
+printf("XOR: %u", result);
+return 0;
+}
+
+asm.s
+
+.global main
+.extern printf
+
+add:
+str fp, [sp, #-4]!
+add fp, sp, #0
+sub sp, sp, #12
+str r0, [fp, #-8]
+str r1, [fp, #-12]
+ldr r2, [fp, #-8]
+ldr r3, [fp, #-12]
+add r3, r2, r3
+mov r0, r3
+add sp, fp, #0
+ldmfd sp!, {fp}
+bx lr
+
+multiply:
+str fp, [sp, #-4]!
+add fp, sp, #0
+sub sp, sp, #12
+str r0, [fp, #-8]
+str r1, [fp, #-12]
+ldr r3, [fp, #-8]
+ldr r2, [fp, #-12]
+mul r3, r2, r3
+mov r0, r3
+add sp, fp, #0
+ldmfd sp!, {fp}
+bx lr
+
+divide:
+stmfd sp!, {fp, lr}
+add fp, sp, #4
+sub sp, sp, #8
+str r0, [fp, #-8]
+str r1, [fp, #-12]
+ldr r0, [fp, #-8]
+ldr r1, [fp, #-12]
+bl __aeabi_uidiv
+mov r3, r0
+mov r0, r3
+sub sp, fp, #4
+ldmfd sp!, {fp, pc}
+
+mean:
+stmfd sp!, {fp, lr}
+add fp, sp, #4
+sub sp, sp, #16
+str r0, [fp, #-16]
+str r1, [fp, #-20]
+mov r3, #0
+str r3, [fp, #-8]
+mov r3, #0
+str r3, [fp, #-12]
+b .L5
+.L6:
+ldr r3, [fp, #-12]
+mov r3, r3, asl #2
+ldr r2, [fp, #-16]
+add r3, r2, r3
+ldr r3, [r3, #0]
+ldr r2, [fp, #-8]
+add r3, r2, r3
+str r3, [fp, #-8]
+ldr r3, [fp, #-12]
+add r3, r3, #1
+str r3, [fp, #-12]
+.L5:
+ldr r2, [fp, #-20]
+ldr r3, [fp, #-12]
+cmp r2, r3
+bhi .L6
+ldr r3, [fp, #-20]
+ldr r0, [fp, #-8]
+mov r1, r3
+bl __aeabi_uidiv
+mov r3, r0
+mov r0, r3
+bl __aeabi_ui2f
+mov r3, r0
+mov r0, r3
+sub sp, fp, #4
+ldmfd sp!, {fp, pc}
+
+odd_or_even:
+str fp, [sp, #-4]!
+add fp, sp, #0
+sub sp, sp, #12
+str r0, [fp, #-8]
+ldr r3, [fp, #-8]
+and r3, r3, #1
+mov r0, r3
+add sp, fp, #0
+ldmfd sp!, {fp}
+bx lr
+
+reverse_bits:
+str fp, [sp, #-4]!
+add fp, sp, #0
+sub sp, sp, #28
+str r0, [fp, #-24]
+mov r3, #0
+str r3, [fp, #-8]
+mov r3, #0
+str r3, [fp, #-12]
+b .L9
+.L11:
+ldr r3, [fp, #-12]
+mov r2, #1
+mov r3, r2, asl r3
+mov r2, r3
+ldr r3, [fp, #-24]
+and r3, r2, r3
+str r3, [fp, #-16]
+ldr r3, [fp, #-16]
+cmp r3, #0
+beq .L10
+ldr r3, [fp, #-12]
+rsb r3, r3, #31
+mov r2, #1
+mov r3, r2, asl r3
+ldr r2, [fp, #-8]
+orr r3, r2, r3
+str r3, [fp, #-8]
+.L10:
+ldr r3, [fp, #-12]
+add r3, r3, #1
+str r3, [fp, #-12]
+.L9:
+ldr r3, [fp, #-12]
+cmp r3, #31
+bls .L11
+ldr r3, [fp, #-8]
+mov r0, r3
+add sp, fp, #0
+ldmfd sp!, {fp}
+bx lr
+
+main:
+stmfd sp!, {r4, r5, fp, lr}
+add fp, sp, #12
+sub sp, sp, #40
+ldr r3, .L13
+sub ip, fp, #48
+mov lr, r3
+ldmia lr!, {r0, r1, r2, r3}
+stmia ip!, {r0, r1, r2, r3}
+ldr r3, [lr, #0]
+str r3, [ip, #0]
+ldr r3, .L13+4
+mov r0, r3
+bl printf
+ldr r1, .L13+8
+sub r2, fp, #24
+sub r3, fp, #28
+mov r0, r1
+mov r1, r2
+mov r2, r3
+bl __isoc99_scanf
+ldr r2, [fp, #-24]
+ldr r3, [fp, #-28]
+mov r0, r2
+mov r1, r3
+bl add
+str r0, [fp, #-16]
+ldr r3, .L13+12
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+ldr r2, [fp, #-24]
+ldr r3, [fp, #-28]
+mov r0, r2
+mov r1, r3
+bl multiply
+str r0, [fp, #-16]
+ldr r3, .L13+16
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+ldr r2, [fp, #-24]
+ldr r3, [fp, #-28]
+mov r0, r2
+mov r1, r3
+bl divide
+str r0, [fp, #-16]
+ldr r3, .L13+20
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+sub r3, fp, #48
+mov r0, r3
+mov r1, #5
+bl mean
+str r0, [fp, #-20] @ float
+ldr r5, .L13+24
+ldr r0, [fp, #-20] @ float
+bl __aeabi_f2d
+mov r3, r0
+mov r4, r1
+mov r0, r5
+mov r2, r3
+mov r3, r4
+bl printf
+ldr r3, [fp, #-24]
+mov r0, r3
+bl odd_or_even
+mov r3, r0
+str r3, [fp, #-16]
+ldr r3, .L13+28
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+ldr r3, [fp, #-24]
+mov r0, r3
+bl reverse_bits
+str r0, [fp, #-16]
+ldr r3, .L13+32
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+ldr r2, [fp, #-24]
+ldr r3, [fp, #-28]
+orr r3, r2, r3
+str r3, [fp, #-16]
+ldr r3, .L13+36
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+ldr r2, [fp, #-24]
+ldr r3, [fp, #-28]
+and r3, r2, r3
+str r3, [fp, #-16]
+ldr r3, .L13+40
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+ldr r2, [fp, #-24]
+ldr r3, [fp, #-28]
+eor r3, r2, r3
+str r3, [fp, #-16]
+ldr r3, .L13+44
+mov r0, r3
+ldr r1, [fp, #-16]
+bl printf
+mov r3, #0
+mov r0, r3
+sub sp, fp, #12
+ldmfd sp!, {r4, r5, fp, pc}
+.L13:
+.word C.0.2612
+.word .LC0
+.word .LC1
+.word .LC2
+.word .LC3
+.word .LC4
+.word .LC5
+.word .LC6
+.word .LC7
+.word .LC8
+.word .LC9
+.word .LC10
+C.0.2612:
+.word 11
+.word 12
+.word 13
+.word 14
+.word 15
+
+.LC0: .ascii "Enter two numbers: \000"
+.LC1: .ascii "%u %u\000"
+.LC2: .ascii "add: %u\000"
+.LC3: .ascii "multiply: %u\000"
+.LC4: .ascii "divide: %u\000"
+.LC5: .ascii "mean: %f\000"
+.LC6: .ascii "odd_even: %u\000"
+.LC7: .ascii "reverse_bits: %u\000"
+.LC8: .ascii "OR: %u\000"
+.LC9: .ascii "AND: %u\000"
+.LC10: .ascii "XOR: %u\000"

@@ -1,0 +1,173 @@
+.global main2
+  .extern printf // to use printf function
+  .data
+   // declare any global variables here
+string:
+        .asciz "%d\n"   
+  ldr r4, =0x5AA5FF00 // seed input data given, r4 = seed address
+  .text
+  main:
+  mov   r12,r13		// save stack pointer into register r12
+  sub   sp,#32		// reserve 32 bytes of space for local variables 
+  push  {lr}		// push link register onto stack -- make sure you pop it out before you return 
+
+  // Your solution here,  r2 = next, r3 = init_val r8=i,r11 = val, 
+
+  mov r8, #0 // i=0;
+  mov r3, r4 //init_val = 0x5AA5FF00;
+  mov r2, #0
+  bl lfsr32  // CALLS lfsr32 Function and get return value in r0.
+  mov r2,r0   // next = lfsr32(0x5AA5FF00);
+  
+//to print value of next:
+  printLoop:
+    push {R0}
+    push {R1}
+    LDR R0, =string         // seed printf
+    LDR R1, [r2]            // seed printf with value of next
+    BL printf      /* bear in mind that after printf execution R0 and R1 valeas have chancged and it is necessary to restore them!! */
+    pop {R1}
+
+      pop {R0}
+
+  add r8,r8,#1   // i++ because we printed 1 time the value already
+
+  cmp r8,#20   // While Loop
+  bge finish        // if r8(i) > 20 go to finish(it already printed all the values)
+                    // while(i<20) do: generate and print 19 values(total 20 values printed)                    
+  mov r11,r2   // val = next;
+  mov r4,r11   // argument input(r4) = val(r11)
+  bl lfsr32    // calls lfsr32 function
+  mov r2,r0   // next = lfsr32(val);
+  //to print value of next:
+  bl printLoop
+  add r8,r8,#1 // i++;
+
+
+  finish:       // finishes and returns function
+    pop {lr}			// pop link register from stack 
+    mov sp,r12		// restore the stack pointer -- Please note stack pointer should be equal to the 				
+    mov pc,lr			// return from the function by copying link register into  program counte
+
+
+
+.global lfsr32
+  .data
+  // declare any global variables here
+ 
+  mov r10,#0  // r10=0;
+
+  .text
+  lfsr32:
+  mov   r12,r13		// save stack pointer into register r12
+  sub   sp,#32		// reserve 32 bytes of space for local variables 
+  push  {lr}		// push link register onto stack -- make sure you pop it out before you return 
+
+  
+
+        // Your solution here
+  // r0 = output(pseudonumber,return value), r4 = seed(ARGUMENT INPUTED), r5= start_state, r6 = lfsr,r7 = bit, 
+  //r8 = value holder for AND,r9 = value holder2,r10 = holder for ANd operation,r11 = holder for and2
+
+  cmp r4,r10
+  beq seedZero    //if seed = 0 go to seedZero
+
+  mov r5,r4    // start_state = seed 
+  mov r6,r5    // lfsr = start_state
+
+  doLoop:      // while branch equal, do loop, if (lfsr == start_state) finishes loop and return
+    cmp r6,r5
+    bne endOfDoLoop    
+  
+    //r6=lfsr,r7 = bit
+
+    push {r8,r9}
+    lsr r8,r7,#0
+    lsr r9,r7, #6
+    eor r10,r8,r9  //r10(holder) = (lfsr >> 0) ^(XOR) (lfsr >> 6)
+    pop {r8,r9}
+    push {r8,r9}
+    lsr r8,r7,#7
+    lsr r9,r7,#12
+    eor r11,r8,r9  //r11(holder2) =  (lfsr >> 7) ^ (lfsr >> 12)
+    pop {r8,r9}
+    eor r7,r10,r11                     // bit = (= ((lfsr >> 0) ^ (lfsr >> 6) ^ (lfsr >> 7) ^ (lfsr >> 12))
+    lsr r8, r6, #1    // r8 = r6 lsr#1
+    lsl r9, r7, #31   //r9 = r7 lsl#31
+
+    orr r6,r8,r9                  //lfsr = (lfsr >> 1) |(OR) (bit<<31)
+     
+
+endOfDoLoop:
+  mov r0,r6   // make return value = lfsr
+  b endFunction // go to exit the function
+
+
+seedZero:
+  add r4,r4,#4 // seed + 1;
+  mov r0,r4    // return value = seed +1;
+  b endFunction
+  
+
+endFunction:
+    pop {lr}			// pop link register from stack 
+    mov sp,r12		// restore the stack pointer -- Please note stack pointer should be equal to the 
+					// value it had when you entered the function . 
+    mov pc,lr			// return from the function by copying link register into  program counter
+
+
+
+
+
+// Input  : This is the value 100 
+// Output : Input value read : a = 100 
+
+ 
+//  printf("  \n");
+//
+//  int i=0;
+//
+//  unsigned long next;
+//  unsigned long init_val = 0x5AA5FF00;
+//  unsigned long val;
+//
+//  next =   lfsr32(init_val);
+//
+//  printf("%lX\n",next);
+//
+//  i++;
+//
+//  while(i<20){ // to generate and print 19 values(total 20 values printed)
+//    val = next;
+//    next = lfsr32(val);
+//    printf("%lX\n",next);
+//    i++;
+//  }
+//}
+
+
+
+
+
+//unsigned long lfsr32(unsigned long seed)
+//{
+//    if(seed == 0)                 // if argument seed ==0 it returns the next 32 bit value in the sequence
+//       return seed+1;
+//
+//    unsigned long start_state = seed;
+//    unsigned long lfsr = start_state;
+//    unsigned long bit;                    // Needs to be 32-bit to allow bit<<31 later in the code 
+//    unsigned long period = 0;
+//    unsigned long output;
+//
+//    do   //The LFSR assembly function should use the following taps: 32 30 26 and 25
+//    {    //return polynomial: x^32 + x^30 + x^26 + x^25 + 1 */
+//        bit = ((lfsr >> 0) ^ (lfsr >> 6) ^ (lfsr >> 7) ^ (lfsr >> 12)) /* & 1u */;
+//        lfsr = (lfsr >> 1) | (bit << 31);
+//        ++period;
+//      
+//    }
+//    while (lfsr == start_state);  //to assure that is different
+//
+//    return lfsr;
+//}
